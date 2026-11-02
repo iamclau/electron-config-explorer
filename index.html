@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Electron Configuration Explorer</title>
+<meta name="description" content="Interactive periodic table that builds atoms electron by electron, with an energy-level diagram, 3D orbital shapes and nodes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="card bar" id="topbar">
+    <h1>Electron Configuration Explorer</h1>
+    <div class="btns">
+      <button id="bReset" title="Remove all electrons (Home)">Reset</button>
+      <button id="bPrev" title="Remove one electron (←)">− e⁻</button>
+      <button id="bNext" class="primary" title="Add one electron (→)">+ e⁻</button>
+      <button id="bPlay" title="Play / pause (Space)">Play</button>
+    </div>
+    <label for="speed" class="toggles">Speed
+      <select id="speed">
+        <option value="1400">Slow</option>
+        <option value="700" selected>Medium</option>
+        <option value="250">Fast</option>
+      </select>
+    </label>
+    <div class="slider">
+      <input type="range" id="zSlider" min="0" max="118" value="7" aria-label="Number of electrons">
+      <output id="zOut" for="zSlider">7 e⁻</output>
+    </div>
+    <div class="toggles">
+      <label for="tActual"><input type="checkbox" id="tActual"> Real exceptions</label>
+      <label for="tShort"><input type="checkbox" id="tShort"> Shorthand</label>
+      <select id="tLayout" aria-label="Table layout">
+        <option value="standard">18-column table</option>
+        <option value="long">32-column table</option>
+      </select>
+    </div>
+  </header>
+
+  <div class="dash" id="dash">
+    <div class="dcol dleft">
+      <section class="card table-card" id="tableCard" aria-label="Periodic table">
+        <div class="table-scroll"><div id="pt" class="pt standard"></div></div>
+        <div class="table-foot">
+          <span><span class="sw" style="background:var(--s)"></span>s</span>
+          <span><span class="sw" style="background:var(--p)"></span>p</span>
+          <span><span class="sw" style="background:var(--d)"></span>d</span>
+          <span><span class="sw" style="background:var(--f)"></span>f</span>
+          <span><b>Click any element to watch it build electron by electron.</b> Small label = where its newest electron goes. A dot marks a real-life exception.</span>
+        </div>
+      </section>
+      <section class="card info" aria-live="polite">
+        <div class="el">
+          <div id="tile" class="tile"><span class="tz" id="tileZ"></span><span class="ts" id="tileS"></span></div>
+          <div class="elx">
+            <div class="ename" id="eName"></div>
+            <div class="emeta" id="eMeta"></div>
+          </div>
+          <div class="stats" id="stats"></div>
+        </div>
+        <div class="config"><span id="cfg"></span></div>
+        <div class="where" id="where"></div>
+        <ul class="explain" id="explain"></ul>
+      </section>
+    </div>
+
+    <div class="dcol dright">
+      <section class="card builder" aria-label="Atom builder animation">
+        <div class="vbar">
+          <span class="vtitle" id="bTitle">Watch the atom build</span>
+          <div class="vopts">
+            <label for="bFade"><input type="checkbox" id="bFade" checked> Fade other subshells</label>
+            <label for="bAuto"><input type="checkbox" id="bAuto" checked> Rotate</label>
+          </div>
+        </div>
+        <div class="canvas-wrap wide" id="bWrap">
+          <canvas id="cvBuild" aria-label="3D atom: orbitals appear as electrons are added"></canvas>
+          <div class="tlabels" id="bLabels"></div>
+          <div class="btop" id="bTop"></div>
+          <div class="bbot" id="bCfg"></div>
+          <div class="vtools"><button type="button" id="bZin" aria-label="Zoom in">+</button><button type="button" id="bZout" aria-label="Zoom out">−</button><button type="button" id="bFit">Reset</button></div>
+          <div class="vempty" id="bErr" hidden>3D view needs WebGL, which this browser has turned off.</div>
+        </div>
+      </section>
+      <section class="card orb-card" id="orbCard" aria-label="Orbital diagram">
+        <h2>Energy levels: each line is one orbital (max 2 e⁻) · higher = more energy · click a line to see its shape</h2>
+        <div class="orb-scroll"><div id="orb" class="orb"></div></div>
+      </section>
+
+    </div>
+  </div>
+
+  <section class="card" aria-label="Fill order">
+    <h2>Fill order (Aufbau)</h2>
+    <div id="strip" class="strip"></div>
+  </section>
+
+  <div class="lower">
+    <section class="card explorer" aria-label="Simple orbital shapes">
+      <div class="vbar">
+        <span class="vtitle" id="xTitle">Simple shapes</span>
+      </div>
+      <div class="vpick" id="xPick"></div>
+      <div class="canvas-wrap" id="xWrap">
+        <canvas id="cvSimple" aria-label="Solid 3D model of the chosen orbital shape"></canvas>
+        <div class="tlabels" id="xLabels"></div>
+        <span class="vhint">Drag to rotate · scroll to zoom</span>
+        <div class="vtools"><button type="button" id="xFit">Reset view</button></div>
+      </div>
+      <div class="vopts">
+        <label for="xSet"><input type="checkbox" id="xSet"> Show the whole set together</label>
+        <label for="xPlanes"><input type="checkbox" id="xPlanes" checked> Show nodal planes</label>
+        <label for="xAuto"><input type="checkbox" id="xAuto" checked> Auto-rotate</label>
+      </div>
+      <div class="nodeinfo" id="xInfo"></div>
+    </section>
+
+    <section class="card">
+      <h2>How to read this page</h2>
+      <div class="rules">
+        <div><b>Aufbau principle:</b> electrons fill the lowest-energy subshell first (lower n + l first; on a tie, lower n first).</div>
+        <div><b>Pauli exclusion:</b> an orbital holds at most 2 electrons, with opposite spins (↑↓).</div>
+        <div><b>Hund's rule:</b> in p, d and f, each orbital gets one electron before any orbital gets a second.</div>
+        <div><b>3D atom:</b> each glowing dot is one electron, and its little cone points ↑ or ↓ for its spin. Shapes use the block colors from the table; the light and dark halves are the two phases. Orbitals with one electron are see-through, and full ones are solid.</div>
+        <div><b>Orbital boxes:</b> rows are energy levels (n). Columns are subshell types: s has 1 orbital, p has 3, d has 5, f has 7.</div>
+        <div>Keys: <span class="kbd">←</span> <span class="kbd">→</span> step, <span class="kbd">Space</span> play, <span class="kbd">Home</span> reset.</div>
+      </div>
+    </section>
+  </div>
+
+  <section class="card shapes" aria-label="Orbital shapes">
+    <div class="shapes-head">
+      <h2>Orbital shapes</h2>
+      <p>Each dot is a place the electron could be found, so dense regions are where it's most likely. Orange and blue show the wave's phase (+ or −). A node is a surface where the wave crosses zero, so the electron is never found there. Click any orbital box above to open it here.</p>
+    </div>
+    <div class="viewers">
+      <div class="viewer">
+        <div class="vbar">
+          <span class="vtitle" id="fTitle">One orbital</span>
+          <div class="seg" role="group" aria-label="View mode">
+            <button type="button" id="mCloud" class="on">3D cloud</button>
+            <button type="button" id="mSlice">Slice through it</button>
+          </div>
+        </div>
+        <div class="vpick">
+          <label for="fSub" class="tag" style="min-width:0">Orbital</label>
+          <select id="fSub"></select>
+          <div id="fBtns" class="vpick"></div>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="cvFocus" aria-label="3D view of the selected orbital"></canvas>
+          <span class="vhint" id="fHint">Drag to rotate · scroll to zoom</span>
+          <div class="vtools"><button type="button" id="fZin" aria-label="Zoom in">+</button><button type="button" id="fZout" aria-label="Zoom out">−</button><button type="button" id="fFit">Reset view</button></div>
+        </div>
+        <div class="vopts">
+          <label for="fFollow"><input type="checkbox" id="fFollow" checked> Follow the newest electron</label>
+          <label for="fNodes"><input type="checkbox" id="fNodes" checked> Show nodes</label>
+          <label for="fAuto"><input type="checkbox" id="fAuto" checked> Auto-rotate</label>
+        </div>
+        <div class="nodeinfo" id="fInfo"></div>
+        <div class="phase">
+          <span><span class="sw" style="background:#ff8c4d"></span>+ phase</span>
+          <span><span class="sw" style="background:#4da6ff"></span>− phase</span>
+          <span>White dashed = node (ψ = 0). Shown at hydrogen-atom size.</span>
+        </div>
+      </div>
+
+      <div class="viewer">
+        <div class="vbar">
+          <span class="vtitle" id="cTitle">All orbitals, overlapped</span>
+          <select id="cScale" aria-label="Orbital sizes">
+            <option value="real">Real sizes for this atom</option>
+            <option value="h">Hydrogen sizes (easier to see)</option>
+          </select>
+        </div>
+        <div class="legend" id="cLegend"></div>
+        <div class="canvas-wrap">
+          <canvas id="cvAll" aria-label="All occupied orbitals of the current atom drawn on top of each other"></canvas>
+          <span class="vhint">Drag to rotate · scroll to zoom</span>
+          <div class="vempty" id="cEmpty" hidden>No electrons yet</div>
+          <div class="vtools"><button type="button" id="cZin" aria-label="Zoom in">+</button><button type="button" id="cZout" aria-label="Zoom out">−</button><button type="button" id="cFit">Reset view</button></div>
+        </div>
+        <div class="vopts">
+          <label for="cAuto"><input type="checkbox" id="cAuto" checked> Auto-rotate</label>
+        </div>
+        <p class="vnote" id="cNote"></p>
+      </div>
+    </div>
+
+    <div>
+      <h2>Every occupied orbital, separately (slice view, nodes in white)</h2>
+      <div id="gallery" class="gallery"></div>
+    </div>
+  </section>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
