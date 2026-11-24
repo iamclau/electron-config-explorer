@@ -65,6 +65,10 @@ I designed the features, the classroom workflow and the chemistry content, and c
 - Ion configurations (removing electrons, e.g. Fe²⁺ loses 4s first)
 - Orbital-energy data for specific atoms instead of the generic diagram
 
+## Related
+
+- [VSEPR Visualization Tool](https://github.com/iamclau/vsepr-visualization-tool) ([live site](https://iamclau.github.io/vsepr-visualization-tool/)): an interactive VSEPR chart, 3D molecule builder, and step-by-step Lewis structure solver.
+
 ## License
 
 MIT License. See [LICENSE](LICENSE).
